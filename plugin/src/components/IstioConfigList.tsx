@@ -10,6 +10,7 @@ import {initKialiListeners} from "../utils";
 import {useParams} from "react-router";
 import { sortable } from '@patternfly/react-table';
 import {istioResources} from "../k8s/resources";
+import useKialiValidations from "../k8s/useKialiValidations";
 
 const useIstioTableColumns = (namespace: string) => {
     const columns: TableColumn<K8sResourceCommon>[] = [
@@ -31,6 +32,10 @@ const useIstioTableColumns = (namespace: string) => {
             sort: 'kind',
             title: 'Kind',
             transforms: [sortable],
+        },
+        {
+            id: 'configuration',
+            title: 'Configuration',
         },
     ];
 
@@ -63,6 +68,10 @@ const columns: TableColumn<K8sResourceCommon>[] = [
         title: 'Kind',
         transforms: [sortable],
     },
+    {
+        id: 'configuration',
+        title: 'Configuration',
+    },
 ];
 
 const Row = ({ obj, activeColumnIDs }: RowProps<K8sResourceCommon>) => {
@@ -81,6 +90,9 @@ const Row = ({ obj, activeColumnIDs }: RowProps<K8sResourceCommon>) => {
             </TableData>
             <TableData id={columns[2].id} activeColumnIDs={activeColumnIDs}>
                 {obj.kind}
+            </TableData>
+            <TableData id={columns[3].id} activeColumnIDs={activeColumnIDs}>
+                {obj['validations']}
             </TableData>
         </>
     );
@@ -151,10 +163,14 @@ const IstioConfigList = () => {
 
     const flatData = watches.map(([list]) => list).flat();
     const loaded = watches.every(([, loaded, error]) => !!(loaded || error));
+
+    const [validationsData, validationsLoaded] = useKialiValidations(flatData, loaded);
+
     const [data, filteredData, onFilterChange] = useListPageFilter(
-        flatData,
+        validationsData,
         filters,
     );
+
     const columns = useIstioTableColumns(ns);
     return (
         <>
@@ -162,7 +178,7 @@ const IstioConfigList = () => {
             <ListPageBody>
                 <ListPageFilter
                     data={data}
-                    loaded={loaded}
+                    loaded={validationsLoaded}
                     rowFilters={filters}
                     onFilterChange={onFilterChange}
                 />
@@ -170,7 +186,7 @@ const IstioConfigList = () => {
                     columns={columns}
                     data={filteredData}
                     unfilteredData={data}
-                    loaded={loaded}
+                    loaded={validationsLoaded}
                 />
             </ListPageBody>
         </>

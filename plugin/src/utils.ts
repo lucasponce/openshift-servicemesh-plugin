@@ -1,5 +1,6 @@
 import { useHistory } from "react-router";
 import {refForKialiIstio} from "./k8s/resources";
+import {consoleFetch} from "@openshift-console/dynamic-plugin-sdk";
 
 export const properties = {
     // This API is hardcoded but:
@@ -11,6 +12,37 @@ export const properties = {
 // This Config type should be mapped with the 'plugin-config.json' file
 export type Config = {
     kialiUrl: string;
+}
+
+export type KialiUrl = {
+    baseUrl: string;
+    token: string;
+}
+
+export const getKialiUrl = async function(): Promise<KialiUrl> {
+    const kialiToken = 'oauth_token=';
+    const kialiUrl = {
+        baseUrl: '',
+        token: '',
+    };
+    let headerOauthToken = '';
+
+    return await new Promise((resolve, reject) => {
+        consoleFetch(properties.pluginConfig)
+            .then((response) => {
+                headerOauthToken = response.headers.get('oauth_token');
+                return response.json();
+            })
+            .then((json) => {
+                kialiUrl.baseUrl = json.kialiUrl;
+                kialiUrl.token = kialiToken  + (
+                    headerOauthToken && headerOauthToken.startsWith('Bearer ') ?
+                        headerOauthToken.substring('Bearer '.length) : ''
+                );
+                resolve(kialiUrl);
+            })
+            .catch((e) => reject(e));
+    });
 }
 
 export const kioskUrl = () => {
