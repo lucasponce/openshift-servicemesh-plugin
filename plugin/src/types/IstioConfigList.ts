@@ -19,13 +19,13 @@ export function validationKey(name: string, namespace?: string): string {
 export function getValidation(istioConfigs: IstioConfigsMap, kind: string, name: string, namespace: string): string {
   if (istioConfigs[namespace] && istioConfigs[namespace].validations[kind.toLowerCase()] && istioConfigs[namespace].validations[kind.toLowerCase()][validationKey(name, namespace)]) {
     let validation = istioConfigs[namespace].validations[kind.toLowerCase()][validationKey(name, namespace)]
-    if (validation.valid) {
-      return "Valid"
+    if (validation.checks.filter(i => i.severity === 'error').length > 0) {
+     return "Error"
     } else {
-     if (validation.checks.filter(i => i.severity === 'error').length > 0) {
-       return "Error"
-     } else {
+     if (validation.checks.filter(i => i.severity === 'warning').length > 0) {
        return "Warning"
+     } else {
+       return "Valid"
      }
     }
   } else {
