@@ -6,11 +6,12 @@ import {
     TableColumn,
     TableData, useActiveColumns, useK8sWatchResource, useListPageFilter, VirtualizedTable
 } from "@openshift-console/dynamic-plugin-sdk";
-import {initKialiListeners} from "../utils";
+import {getKialiUrl, initKialiListeners} from "../utils";
 import {useParams} from "react-router";
 import { sortable } from '@patternfly/react-table';
 import {istioResources} from "../k8s/resources";
-import useKialiValidations from "../k8s/useKialiValidations";
+import * as API from "../k8s/api";
+import {getValidation, IstioConfigsMap} from "../types/IstioConfigList";
 
 const useIstioTableColumns = (namespace: string) => {
     const columns: TableColumn<K8sResourceCommon>[] = [
@@ -92,7 +93,7 @@ const Row = ({ obj, activeColumnIDs }: RowProps<K8sResourceCommon>) => {
                 {obj.kind}
             </TableData>
             <TableData id={columns[3].id} activeColumnIDs={activeColumnIDs}>
-                {obj['validations']}
+                {obj['validations'] ? obj['validations'] : 'N/A'}
             </TableData>
         </>
     );
@@ -148,6 +149,8 @@ const IstioConfigList = () => {
 
     initKialiListeners();
 
+    const [kialiValidations, setKialiValidations] = React.useState<IstioConfigsMap>(undefined);
+
     const watches = istioResources.map(({ group, version, kind }) => {
         const [data, loaded, error] = useK8sWatchResource<K8sResourceCommon[]>({
             groupVersionKind: { group, version, kind },
@@ -164,10 +167,32 @@ const IstioConfigList = () => {
     const flatData = watches.map(([list]) => list).flat();
     const loaded = watches.every(([, loaded, error]) => !!(loaded || error));
 
-    const [validationsData, validationsLoaded] = useKialiValidations(flatData, loaded);
+    React.useEffect(() => {
+        if (loaded) {
+            console.log('KIALI FETCHING ');
+            getKialiUrl()
+                .then(kialiUrl => {
+                    API.getAllIstioConfigs(kialiUrl.baseUrl, kialiUrl.token)
+                        .then(response => response.data)
+                        .then((kialiValidations) => {
+                            console.log('KIALI FETCHED ');
+                            setKialiValidations(kialiValidations);
+                        });
+                })
+                .catch(e => console.error(e));
+        }
+    }, [loaded]);
+
+    const combinedData = React.useMemo(() => {
+        if (loaded && kialiValidations) {
+            console.log('KIALI COMBINE');
+            flatData.forEach(d => d['validations'] = getValidation(kialiValidations, d.kind, d.metadata.name, d.metadata.namespace))
+        }
+        return flatData;
+    }, [flatData, kialiValidations, loaded])
 
     const [data, filteredData, onFilterChange] = useListPageFilter(
-        validationsData,
+        combinedData,
         filters,
     );
 
@@ -178,7 +203,7 @@ const IstioConfigList = () => {
             <ListPageBody>
                 <ListPageFilter
                     data={data}
-                    loaded={validationsLoaded}
+                    loaded={loaded}
                     rowFilters={filters}
                     onFilterChange={onFilterChange}
                 />
@@ -186,7 +211,7 @@ const IstioConfigList = () => {
                     columns={columns}
                     data={filteredData}
                     unfilteredData={data}
-                    loaded={validationsLoaded}
+                    loaded={loaded}
                 />
             </ListPageBody>
         </>
