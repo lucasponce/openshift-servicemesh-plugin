@@ -168,14 +168,13 @@ const IstioConfigList = () => {
     const loaded = watches.every(([, loaded, error]) => !!(loaded || error));
 
     React.useEffect(() => {
+        console.log('useEffect ' + loaded)
         if (loaded) {
-            console.log('KIALI FETCHING ');
             getKialiUrl()
                 .then(kialiUrl => {
                     API.getAllIstioConfigs(kialiUrl.baseUrl, kialiUrl.token)
                         .then(response => response.data)
                         .then((kialiValidations) => {
-                            console.log('KIALI FETCHED ');
                             setKialiValidations(kialiValidations);
                         });
                 })
@@ -183,13 +182,29 @@ const IstioConfigList = () => {
         }
     }, [loaded]);
 
-    const combinedData = React.useMemo(() => {
+    var combinedData = React.useMemo(() => {
+        console.log('useMemo ' + loaded + ' ' + kialiValidations)
+        //const flatDataCopy = Object.create(flatData);
         if (loaded && kialiValidations) {
-            console.log('KIALI COMBINE');
             flatData.forEach(d => d['validations'] = getValidation(kialiValidations, d.kind, d.metadata.name, d.metadata.namespace))
         }
         return flatData;
-    }, [flatData, kialiValidations, loaded])
+    }, [kialiValidations])
+
+    combinedData = React.useMemo(() => {
+        console.log('useMemo2')
+        getKialiUrl()
+            .then(kialiUrl => {
+                API.getAllIstioConfigs(kialiUrl.baseUrl, kialiUrl.token)
+                    .then(response => response.data)
+                    .then((kialiValidations) => {
+                        flatData.forEach(d => d['validations'] = getValidation(kialiValidations, d.kind, d.metadata.name, d.metadata.namespace))
+                        //setKialiValidations(kialiValidations);
+                    });
+            })
+            .catch(e => console.error(e));
+        return flatData;
+    }, [flatData])
 
     const [data, filteredData, onFilterChange] = useListPageFilter(
         combinedData,
