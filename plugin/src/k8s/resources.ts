@@ -104,6 +104,9 @@ export const referenceForObj = (obj: K8sResourceCommon) => {
   return referenceFor(group, version, kind);
 };
 
+export const referenceForRsc = (obj: K8sResourceCommon) => {
+  return referenceForObj(obj) + '-' + obj.metadata.namespace + '-' + obj.metadata.name + '-' + obj.metadata.resourceVersion;
+};
 // This helper would translate Istio Kiali formast
 // i.e. /istio/destinationrules/reviews
 // Into the regular format used for resources in OpenShift
