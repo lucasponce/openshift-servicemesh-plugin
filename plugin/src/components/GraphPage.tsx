@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {getKialiUrl, initKialiListeners, kioskUrl} from "../utils";
+import { getKialiUrl, initKialiListeners, kioskUrl } from '../kialiIntegration';
 
 const GraphPage = () => {
     const [kialiUrl, setKialiUrl] = React.useState({

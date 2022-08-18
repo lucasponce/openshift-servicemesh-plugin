@@ -5,13 +5,13 @@ import {
     RowProps,
     TableColumn,
     TableData, useActiveColumns, useK8sWatchResource, useListPageFilter, VirtualizedTable
-} from "@openshift-console/dynamic-plugin-sdk";
-import {getKialiUrl, initKialiListeners} from "../utils";
-import {useParams} from "react-router";
+} from '@openshift-console/dynamic-plugin-sdk';
+import { getKialiUrl, initKialiListeners } from '../kialiIntegration';
+import { useParams } from 'react-router';
 import { sortable } from '@patternfly/react-table';
-import {istioResources, referenceForRsc} from "../k8s/resources";
-import * as API from "../k8s/api";
-import {getValidation, IstioConfigsMap} from "../types/IstioConfigList";
+import { istioResources, referenceForRsc } from '../k8s/resources';
+import * as API from '../k8s/api';
+import {getValidation, IstioConfigsMap} from '../types/IstioConfigList';
 
 const useIstioTableColumns = (namespace: string) => {
     const columns: TableColumn<K8sResourceCommon>[] = [
@@ -169,16 +169,10 @@ const IstioConfigList = () => {
     const resourceVersion = flatData.map(r => referenceForRsc(r));
     const loaded = watches.every(([, loaded, error]) => !!(loaded || error));
 
-    console.log('KIALI RENDER: ' + JSON.stringify(resourceVersion));
-
     React.useEffect(() => {
         // Kiali validations should be fetched when:
         // - All watchers are loaded
         // - No new updates on the list of the objects
-        console.log('KIALI loaded              : ' + loaded);
-        console.log('KIALI resourceVersion     : ' + JSON.stringify(resourceVersion));
-        console.log('KIALI prevResourceVersion : ' + JSON.stringify(prevResourceVersion.current));
-
         const newUpdates =
             // Initial fetch
             (resourceVersion.length === 0 && prevResourceVersion.current.length === 0) ||
@@ -187,28 +181,28 @@ const IstioConfigList = () => {
             // Same size but different elements
             resourceVersion.some(v => !prevResourceVersion.current.includes(v));
 
-        const shouldFetch = loaded && newUpdates;
-        console.log('KIALI SHOULD FETCH ' + shouldFetch);
-
-        if (shouldFetch) {
-            console.log('KIALI FETCHING ');
+        if (loaded && newUpdates) {
             getKialiUrl()
                 .then(kialiUrl => {
                     API.getAllIstioConfigs(kialiUrl.baseUrl, kialiUrl.token)
                         .then(response => response.data)
                         .then((kialiValidations) => {
-                            console.log('KIALI FETCHED ');
+                            // Update the list of resources present when last fech of Kiali Validations
+                            // Hooks need to maintain this "when to update" logic inside to avoid unnecessary fetches and renders
                             prevResourceVersion.current = Array.from(resourceVersion);
                             setKialiValidations(kialiValidations);
                         });
                 })
-                .catch(e => console.error(e));
+                .catch(error => console.error('Could not connect to Kiali API', error));
         }
+        // Deps trigger the hook, but those are not "enough", inner logic is needed to check changes
     }, [loaded, resourceVersion, prevResourceVersion]);
 
+    // On new resources and/or validations, a combination task is required
+    // This uses a "trick" to add a dynamic "validations" field to the K8sResourceCommon type
+    // Probably it can be added a custom type, but that will trigger more refactoring on the standard classes used for tables and filters
     const combinedData = React.useMemo(() => {
         if (loaded && kialiValidations) {
-            console.log('KIALI COMBINE');
             flatData.forEach(d => d['validations'] = getValidation(kialiValidations, d.kind, d.metadata.name, d.metadata.namespace))
         }
         return flatData;

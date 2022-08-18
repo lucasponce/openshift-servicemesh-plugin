@@ -1,6 +1,6 @@
 import * as React from 'react';
-import {useHistory} from "react-router";
-import {getKialiUrl, initKialiListeners, kioskUrl} from "../utils";
+import {useHistory} from 'react-router';
+import {getKialiUrl, initKialiListeners, kioskUrl} from '../kialiIntegration';
 
 const kialiTypes = {
     services: 'services',
@@ -24,6 +24,17 @@ const MeshTab = () => {
             .catch(e => console.error(e));
     });
 
+    // This parsing logic maps the location of the user in the OpenShift console to populate the iFrame url to
+    // the proper target in the Kiali side
+    // There is not a 1-to-1 mapping between OpenShift Console entities and Kiali Standalone, so the plugin decides
+    // which is the best integration:
+    // OpenShift Projects -> Service Mesh tab will point to the Kiali Graph
+    // Kiali Application  -> OpenShift Console will point to a list of Pods filtered by "app" label
+    // (There is an "application" concept under the OpenShift Developer perspective, but it's not a good fit for the moment)
+    // OpenShift Pod      -> Kiali Workload
+    //
+    // This parsing logic can be improved to better cover corner cases.
+    // Current logic can be considered PoC/Experimental but valid for first steps.
     const history = useHistory();
     const path = history.location.pathname.substr(8);
     const items = path.split('/');
