@@ -1,0 +1,12 @@
+{
+  "chromeWebSecurity": false,
+  "defaultCommandTimeout": 10000,
+  "fixturesFolder": false,
+  "projectId": "openshift-servicemesh-plugin",
+  "viewportWidth": 1920,
+  "viewportHeight": 1080,
+  "retries": {
+    "runMode": 1,
+    "openMode": 0
+  }
+}

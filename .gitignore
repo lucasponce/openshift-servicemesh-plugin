@@ -7,6 +7,10 @@ plugin/.vscode
 
 # testing
 plugin/coverage
+# "fixtures" is not currently used in the project, but opening the cypress UI creates a demo folder that we don't want to add to the project
+plugin/cypress/fixtures
+plugin/cypress/screenshots
+plugin/cypress/videos
 
 # production
 plugin/dist
@@ -21,4 +25,5 @@ plugin/.env.production.local
 plugin/npm-debug.log*
 plugin/yarn-debug.log*
 plugin/yarn-error.log*
+
 
